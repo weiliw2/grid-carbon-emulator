@@ -1,56 +1,53 @@
 # Grid Carbon-Intensity Emulator
 
-An AI-powered system to predict country-level grid carbon intensity and simulate carbon-aware computing strategies.
+**Author:** Weilin  
 
-## 🎯 Project Overview
-
-This project builds a machine learning emulator that predicts a country's electricity grid carbon intensity based on its power generation infrastructure. The emulator can instantly simulate policy changes (like renewable energy transitions) without recalculating complex energy models.
-
-## 📊 Data Source
-
-- **Global Power Plant Database (GPPD)** from World Resources Institute
-- ~35,000 power plants worldwide
-- Fuel types, capacity, generation data
-
-## 🛠️ Tech Stack
-
-- **Data Processing**: Pandas, GeoPandas
-- **Machine Learning**: Scikit-learn, XGBoost
-- **Visualization**: Plotly, Streamlit
-- **Deployment**: Streamlit Cloud
-
-## 📁 Project Structure
-
-```
-grid-carbon-emulator/
-├── data/
-│   ├── raw/              # Raw data from GPPD
-│   └── processed/        # Cleaned and aggregated data
-├── notebooks/            # Jupyter notebooks for exploration
-├── src/                  # Python scripts
-├── visualizations/       # Dashboard and plots
-└── README.md
-```
-
-## 🚀 Getting Started
-
-1. Clone the repository
-2. Create virtual environment: `python3 -m venv venv`
-3. Activate: `source venv/bin/activate`
-4. Install dependencies: `pip install -r requirements.txt`
-5. Run Phase 1: `python src/phase1_data_fetch.py`
-
-## 📈 Project Phases
-
-- [x] **Phase 1**: Global data engineering
-- [ ] **Phase 2**: Carbon intensity calculations
-- [ ] **Phase 3**: ML emulator training
-- [ ] **Phase 4**: Interactive dashboard
-
-## 👤 Author
-
-[Your Name]
-Environmental Analytics Portfolio Project
+An AI-powered system that predicts electricity grid carbon intensity and simulates the impact of energy policy changes across 167 countries.
 
 ---
-*Built with Python, XGBoost, and Streamlit*
+
+## Overview
+
+This project builds a machine learning emulator that instantly predicts a country's grid carbon intensity based on its power generation infrastructure. The trained model enables rapid simulation of policy scenarios—such as renewable energy transitions—without recalculating complex energy models.
+
+**Key Achievement:** Trained XGBoost/Random Forest models achieve R² = 0.64 with MAE of 60 gCO2/kWh, enabling instant policy impact predictions.
+
+---
+
+**Features:**
+- **Global Map**: Interactive choropleth showing carbon intensity across 167 countries
+- **Policy Simulator**: Real-time "what-if" scenarios for energy transitions
+- **Country Analysis**: Deep-dive into individual country energy profiles
+
+---
+
+## 📊 Data & Methodology
+
+**Data Source:** [Global Power Plant Database](https://github.com/wri/global-power-plant-database) (World Resources Institute)
+- 34,936 power plants worldwide
+- Fuel types, capacity, and generation data
+
+**Emission Factors:** Standard IPCC/EPA values (Coal: 820 gCO2/kWh, Gas: 490, Solar: 48, etc.)
+
+## Key Results
+
+### Model Performance
+- **Algorithm:** Random Forest / XGBoost
+- **R² Score:** 0.636
+- **Mean Absolute Error:** 60 gCO2/kWh
+- **Training Data:** 167 countries with complete energy mix data
+
+### Sample Insights
+- **Cleanest Grids:** Countries with 90%+ hydro/nuclear (e.g., Paraguay, Iceland)
+- **Highest Emitters:** Coal-dependent grids (>800 gCO2/kWh)
+- **Policy Impact:** Replacing 20% coal with solar reduces carbon intensity by 10-15%
+
+
+## 📄 License
+
+Data: [Creative Commons Attribution 4.0](https://creativecommons.org/licenses/by/4.0/) (WRI GPPD)  
+Code: MIT License
+
+---
+
+*Built as a portfolio project demonstrating expertise in environmental data science, machine learning, and interactive visualization.*
