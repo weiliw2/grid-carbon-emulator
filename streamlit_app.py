@@ -73,7 +73,7 @@ if data_loaded:
     st.sidebar.header("🎛️ Controls")
     
     # Tab selection
-    tab1, tab2, tab3 = st.tabs(["🌍 Global Overview", "🔮 Policy Simulator", "📊 Country Deep Dive"])
+    tab1, tab2, tab3, tab4 = st.tabs(["🌍 Global Overview", "🔮 Policy Simulator", "📊 Country Deep Dive", "🖥️ Data Center Calculator"])
     
     # TAB 1: Global Overview
     with tab1:
@@ -357,6 +357,201 @@ if data_loaded:
         )
         
         st.plotly_chart(fig, use_container_width=True)
+    
+    # TAB 4: Data Center Carbon Calculator
+    with tab4:
+        st.header("🖥️ Data Center Carbon Cost Calculator")
+        st.markdown("""
+        Calculate the carbon footprint and potential carbon tax costs for data centers based on location.
+        Understand how grid carbon intensity affects operational sustainability.
+        """)
+        
+        # User inputs
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("⚙️ Data Center Specifications")
+            
+            dc_power_mw = st.number_input(
+                "Power Capacity (MW)",
+                min_value=1,
+                max_value=500,
+                value=50,
+                help="Total power capacity of the data center"
+            )
+            
+            utilization = st.slider(
+                "Average Utilization (%)",
+                min_value=10,
+                max_value=100,
+                value=70,
+                help="Percentage of capacity typically used"
+            )
+            
+            pue = st.slider(
+                "Power Usage Effectiveness (PUE)",
+                min_value=1.0,
+                max_value=3.0,
+                value=1.5,
+                step=0.1,
+                help="1.0 = perfect efficiency, industry average ~1.5-2.0"
+            )
+        
+        with col2:
+            st.subheader("📍 Location")
+            
+            dc_country = st.selectbox(
+                "Data Center Location",
+                options=sorted(country_data['country'].tolist()),
+                index=sorted(country_data['country'].tolist()).index('USA') if 'USA' in country_data['country'].tolist() else 0
+            )
+            
+            carbon_tax = st.number_input(
+                "Carbon Tax ($/tonne CO₂)",
+                min_value=0,
+                max_value=200,
+                value=50,
+                help="Current or proposed carbon tax rate"
+            )
+            
+            st.info(f"💡 EU ETS carbon price: ~€80-100/tonne\n\nSingapore: S$25/tonne (rising to S$80)")
+        
+        # Get country carbon intensity
+        country_info = country_data[country_data['country'] == dc_country].iloc[0]
+        carbon_intensity = country_info['carbon_intensity_gco2_kwh']
+        
+        # Calculate metrics
+        effective_power_mw = dc_power_mw * (utilization / 100) * pue
+        annual_energy_gwh = effective_power_mw * 8760 / 1000
+        annual_emissions_tonnes = (annual_energy_gwh * 1_000_000 * carbon_intensity) / 1_000_000_000
+        annual_carbon_cost = annual_emissions_tonnes * carbon_tax
+        
+        # Results
+        st.subheader("📊 Annual Carbon Footprint")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric(
+                "Energy Consumption",
+                f"{annual_energy_gwh:,.0f} GWh/year"
+            )
+        
+        with col2:
+            st.metric(
+                "CO₂ Emissions",
+                f"{annual_emissions_tonnes:,.0f} tonnes/year"
+            )
+        
+        with col3:
+            st.metric(
+                "Grid Intensity",
+                f"{carbon_intensity:.0f} gCO2/kWh",
+                help=f"{dc_country} grid carbon intensity"
+            )
+        
+        with col4:
+            st.metric(
+                "Carbon Tax Cost",
+                f"${annual_carbon_cost:,.0f}/year",
+                delta=f"${annual_carbon_cost/12:,.0f}/month",
+                help="Annual carbon tax liability"
+            )
+        
+        # Comparison with other locations
+        st.subheader("🌍 Location Comparison")
+        
+        comparison_countries = ['USA', 'CHN', 'IND', 'DEU', 'FRA', 'GBR', 'SGP', 'NOR', 'ISL']
+        comparison_data = []
+        
+        for country in comparison_countries:
+            if country in country_data['country'].values:
+                c_info = country_data[country_data['country'] == country].iloc[0]
+                c_emissions = (annual_energy_gwh * 1_000_000 * c_info['carbon_intensity_gco2_kwh']) / 1_000_000_000
+                c_cost = c_emissions * carbon_tax
+                
+                comparison_data.append({
+                    'Country': country,
+                    'Carbon Intensity': c_info['carbon_intensity_gco2_kwh'],
+                    'Annual Emissions (tonnes)': c_emissions,
+                    'Annual Carbon Cost ($)': c_cost,
+                    'Renewable %': c_info['renewable_percentage']
+                })
+        
+        comp_df = pd.DataFrame(comparison_data).sort_values('Annual Emissions (tonnes)')
+        
+        # Visualization
+        fig = px.bar(
+            comp_df,
+            x='Country',
+            y='Annual Emissions (tonnes)',
+            color='Renewable %',
+            color_continuous_scale='RdYlGn',
+            title=f'Annual Emissions for {dc_power_mw}MW Data Center by Location',
+            hover_data=['Carbon Intensity', 'Annual Carbon Cost ($)']
+        )
+        
+        fig.update_layout(height=400)
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Savings potential
+        st.subheader("💰 Potential Savings")
+        
+        cleanest_location = comp_df.iloc[0]
+        current_location = comp_df[comp_df['Country'] == dc_country].iloc[0]
+        
+        emission_savings = current_location['Annual Emissions (tonnes)'] - cleanest_location['Annual Emissions (tonnes)']
+        cost_savings = current_location['Annual Carbon Cost ($)'] - cleanest_location['Annual Carbon Cost ($)']
+        
+        if emission_savings > 0:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.success(f"🌱 **Moving to {cleanest_location['Country']} could save:**")
+                st.write(f"• **{emission_savings:,.0f} tonnes CO₂/year**")
+                st.write(f"• **${cost_savings:,.0f}/year** in carbon costs")
+                st.write(f"• **{(emission_savings/current_location['Annual Emissions (tonnes)'])*100:.1f}%** emission reduction")
+            
+            with col2:
+                ten_year_savings = cost_savings * 10
+                st.info(f"📈 **10-Year Projection:**")
+                st.write(f"• Total carbon cost savings: **${ten_year_savings:,.0f}**")
+                st.write(f"• Total emissions avoided: **{emission_savings*10:,.0f} tonnes**")
+                st.write(f"• Equivalent to taking **{(emission_savings*10/4.6):,.0f} cars** off the road")
+        else:
+            st.success(f"✅ {dc_country} is already among the cleanest locations for data centers!")
+        
+        # Renewable energy recommendations
+        st.subheader("🔋 Carbon Reduction Strategies")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**On-site Solutions:**")
+            st.write("• Install solar panels (reduce grid dependency)")
+            st.write("• Battery storage for load shifting")
+            st.write("• Power Purchase Agreements (PPAs) for renewables")
+            st.write("• Improve PUE through cooling optimization")
+        
+        with col2:
+            st.markdown("**Location Strategies:**")
+            st.write("• Prioritize regions with clean grids")
+            st.write("• Consider carbon intensity in site selection")
+            st.write("• Multi-region deployment for workload shifting")
+            st.write("• Partner with utilities on renewable projects")
+        
+        # Data table
+        with st.expander("📋 View Detailed Comparison Table"):
+            st.dataframe(
+                comp_df.style.format({
+                    'Carbon Intensity': '{:.0f}',
+                    'Annual Emissions (tonnes)': '{:,.0f}',
+                    'Annual Carbon Cost ($)': '${:,.0f}',
+                    'Renewable %': '{:.1f}%'
+                }),
+                use_container_width=True,
+                hide_index=True
+            )
     
     # Footer
     st.markdown("---")
