@@ -1,6 +1,6 @@
 # Methodology
 
-This document describes how the Grid Carbon-Intensity Emulator converts global power plant data into country-level electricity carbon-intensity estimates and then trains a machine-learning surrogate model for rapid scenario analysis.
+This document describes how the Grid Carbon Analysis Tool converts global power plant data into country-level electricity carbon-intensity estimates and then trains a machine-learning surrogate model for rapid scenario analysis.
 
 ## Scope
 

@@ -1,14 +1,14 @@
-# Grid Carbon-Intensity Emulator
+# Grid Carbon Analysis Tool
 
 **Author:** Weilin  
 
-An AI-powered system that predicts electricity grid carbon intensity and simulates the impact of energy policy changes across 167 countries.
+A country-level grid carbon analysis and scenario tool for exploring electricity carbon intensity across 167 countries.
 https://grid-carbon-emulator-kmqkovap6aldgbbqgimcxs.streamlit.app/
 ---
 
 ## Overview
 
-This project builds a machine learning emulator that instantly predicts a country's grid carbon intensity based on its power generation infrastructure. The trained model enables rapid simulation of policy scenarios—such as renewable energy transitions—without recalculating complex energy models.
+This project estimates country-level grid carbon intensity from power generation infrastructure data and uses a surrogate model for rapid scenario analysis. It is designed for benchmarking electricity systems, exploring energy-transition pathways, and comparing location-specific carbon exposure.
 
 **Key Achievement:** Trained XGBoost/Random Forest models achieve R² = 0.64 with MAE of 60 gCO2/kWh, enabling instant policy impact predictions.
 
@@ -53,4 +53,4 @@ Code: MIT License
 
 ---
 
-*Built as a portfolio project demonstrating expertise in environmental data science, machine learning, and interactive visualization.*
+*Built as a portfolio project demonstrating expertise in environmental and energy analysis, carbon-intensity modeling, and interactive data visualization.*

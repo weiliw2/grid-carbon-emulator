@@ -1,4 +1,4 @@
-"""Grid Carbon-Intensity Emulator Streamlit entry point."""
+"""Grid Carbon Analysis Tool Streamlit entry point."""
 
 import streamlit as st
 
@@ -15,7 +15,7 @@ from app.styles import APP_CSS
 
 
 st.set_page_config(
-    page_title="Grid Carbon Emulator",
+    page_title="Grid Carbon Analysis Tool",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -35,13 +35,30 @@ except Exception as exc:
     data_loaded = False
 
 if data_loaded:
-    st.title("Grid Carbon-Intensity Emulator")
     st.markdown(
         """
-        <p style='font-size: 1.25rem; color: #374151; margin-bottom: 2.5rem; line-height: 1.6;'>
-        AI-powered analysis and simulation of electricity grid carbon intensity across 167 countries.
-        Predict the impact of energy policy changes and optimize data center location strategies.
-        </p>
+        <section class="hero-shell">
+            <div class="hero-kicker">Electricity Systems</div>
+            <h1>Grid Carbon Analysis Tool</h1>
+            <p class="hero-lede">
+                Country-level analysis and scenario simulation of electricity grid carbon intensity across 167 countries.
+                Explore energy-transition impacts, benchmark national power systems, and compare location-specific carbon exposure.
+            </p>
+            <div class="status-grid">
+                <div class="status-card">
+                    <div class="status-label">Coverage</div>
+                    <div class="status-value">167 countries in the current processed dataset</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-label">Method</div>
+                    <div class="status-value">Plant-level aggregation with scenario modeling and benchmark validation</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-label">Primary Data</div>
+                    <div class="status-value">World Resources Institute Global Power Plant Database</div>
+                </div>
+            </div>
+        </section>
         """,
         unsafe_allow_html=True,
     )
@@ -71,8 +88,9 @@ if data_loaded:
     st.markdown("---")
     st.markdown(
         """
-        <div style='text-align: center; color: #6B7280; font-size: 0.9rem;'>
-        <strong>Grid Carbon-Intensity Emulator</strong> | Built with Python, XGBoost, and Streamlit<br>
+        <div style='text-align: center; color: #586663; font-size: 0.95rem; line-height: 1.7;'>
+        <strong>Grid Carbon Analysis Tool</strong><br>
+        Country-level electricity carbon-intensity analysis, scenario exploration, and benchmark validation<br>
         Data source: Global Power Plant Database by World Resources Institute
         </div>
         """,

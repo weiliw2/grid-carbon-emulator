@@ -19,14 +19,60 @@ from app.scenarios import (
 def render_global_overview(country_data: pd.DataFrame) -> None:
     """Render the global summary page."""
     st.markdown("## Global Carbon Intensity Map")
-    st.markdown("Explore carbon intensity patterns across countries and identify leaders in clean energy.")
+    st.markdown(
+        '<p class="section-intro">Explore country-level electricity carbon intensity, renewable share, and dominant fuel patterns across the current global dataset.</p>',
+        unsafe_allow_html=True,
+    )
+
+    valid_data = country_data[country_data["carbon_intensity_gco2_kwh"].notna()].copy()
+    avg_intensity = valid_data["carbon_intensity_gco2_kwh"].mean()
+    median_intensity = valid_data["carbon_intensity_gco2_kwh"].median()
+    cleanest = valid_data.nsmallest(1, "carbon_intensity_gco2_kwh").iloc[0]
+    dirtiest = valid_data.nlargest(1, "carbon_intensity_gco2_kwh").iloc[0]
+    avg_renewable = valid_data["renewable_percentage"].mean()
+    high_renewable_count = int((valid_data["renewable_percentage"] >= 50).sum())
+    coal_dominant_count = int((valid_data["dominant_fuel"] == "Coal").sum())
+    low_intensity_count = int((valid_data["carbon_intensity_gco2_kwh"] < 200).sum())
+
+    st.markdown(
+        f"""
+        <div class="insight-grid">
+            <div class="insight-card">
+                <div class="insight-label">Current Baseline</div>
+                <div class="insight-value">{avg_intensity:.0f} gCO2/kWh average</div>
+                <div class="insight-meta">Median intensity is {median_intensity:.0f} gCO2/kWh across {len(valid_data)} countries with valid modeled output.</div>
+            </div>
+            <div class="insight-card">
+                <div class="insight-label">Lower-Carbon Systems</div>
+                <div class="insight-value">{low_intensity_count} countries below 200 gCO2/kWh</div>
+                <div class="insight-meta">{high_renewable_count} countries exceed 50% renewable capacity in the current plant-level mix estimate.</div>
+            </div>
+            <div class="insight-card">
+                <div class="insight-label">Structural Watchpoint</div>
+                <div class="insight-value">{coal_dominant_count} coal-dominant systems</div>
+                <div class="insight-meta">Coal remains the dominant installed fuel in a large share of the highest-intensity national grids.</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        f"""
+        <div class="note-panel">
+            <div class="note-title">What To Look For</div>
+            <div class="note-body">
+                The cleanest modeled grid in the current dataset is <strong>{cleanest['country']}</strong> at
+                <strong>{cleanest['carbon_intensity_gco2_kwh']:.0f} gCO2/kWh</strong>, while the most carbon-intensive is
+                <strong>{dirtiest['country']}</strong> at <strong>{dirtiest['carbon_intensity_gco2_kwh']:.0f} gCO2/kWh</strong>.
+                Use the map to identify regional patterns, then compare the distribution and watchlist tables below to spot structural outliers.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     col1, col2, col3, col4 = st.columns(4)
-
-    avg_intensity = country_data["carbon_intensity_gco2_kwh"].mean()
-    cleanest = country_data.nsmallest(1, "carbon_intensity_gco2_kwh").iloc[0]
-    dirtiest = country_data.nlargest(1, "carbon_intensity_gco2_kwh").iloc[0]
-    avg_renewable = country_data["renewable_percentage"].mean()
 
     with col1:
         st.metric("Global Average", f"{avg_intensity:.0f} gCO2/kWh")
@@ -37,34 +83,89 @@ def render_global_overview(country_data: pd.DataFrame) -> None:
     with col4:
         st.metric("Avg Renewable %", f"{avg_renewable:.1f}%")
 
-    st.subheader("Carbon Intensity by Country")
-    fig = px.choropleth(
-        country_data,
-        locations="country",
-        locationmode="ISO-3",
-        color="carbon_intensity_gco2_kwh",
-        hover_name="country",
-        hover_data={
-            "carbon_intensity_gco2_kwh": ":.0f",
-            "renewable_percentage": ":.1f",
-            "dominant_fuel": True,
-            "country": False,
-        },
-        color_continuous_scale="RdYlGn_r",
-        labels={"carbon_intensity_gco2_kwh": "Carbon Intensity (gCO2/kWh)"},
-    )
-    fig.update_layout(
-        height=550,
-        margin=dict(l=0, r=0, t=0, b=0),
-        paper_bgcolor="rgba(0,0,0,0)",
-        geo=dict(bgcolor="rgba(0,0,0,0)", showframe=False, projection_type="natural earth"),
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    col_map, col_dist = st.columns([1.8, 1], gap="large")
 
+    with col_map:
+        st.subheader("Carbon Intensity by Country")
+        fig = px.choropleth(
+            valid_data,
+            locations="country",
+            locationmode="ISO-3",
+            color="carbon_intensity_gco2_kwh",
+            hover_name="country",
+            hover_data={
+                "carbon_intensity_gco2_kwh": ":.0f",
+                "renewable_percentage": ":.1f",
+                "dominant_fuel": True,
+                "country": False,
+            },
+            color_continuous_scale=[
+                [0.0, "#1f5c4f"],
+                [0.5, "#ddb96b"],
+                [1.0, "#b85c38"],
+            ],
+            labels={"carbon_intensity_gco2_kwh": "Carbon Intensity (gCO2/kWh)"},
+        )
+        fig.update_layout(
+            height=560,
+            margin=dict(l=0, r=0, t=0, b=0),
+            paper_bgcolor="rgba(0,0,0,0)",
+            geo=dict(bgcolor="rgba(0,0,0,0)", showframe=False, projection_type="natural earth"),
+            coloraxis_colorbar=dict(len=0.72, thickness=16),
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    with col_dist:
+        st.subheader("Distribution")
+        distribution_fig = px.histogram(
+            valid_data,
+            x="carbon_intensity_gco2_kwh",
+            nbins=24,
+            color_discrete_sequence=["#1f5c4f"],
+            labels={"carbon_intensity_gco2_kwh": "Carbon Intensity (gCO2/kWh)"},
+        )
+        distribution_fig.add_vline(
+            x=avg_intensity,
+            line_dash="dash",
+            line_color="#b85c38",
+            annotation_text="Average",
+            annotation_position="top right",
+        )
+        distribution_fig.update_layout(
+            height=270,
+            bargap=0.08,
+            margin=dict(l=0, r=0, t=10, b=0),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            yaxis_title="Countries",
+        )
+        st.plotly_chart(distribution_fig, use_container_width=True)
+
+        renewable_fig = px.scatter(
+            valid_data,
+            x="renewable_percentage",
+            y="carbon_intensity_gco2_kwh",
+            hover_name="country",
+            color="dominant_fuel",
+            labels={
+                "renewable_percentage": "Renewable Capacity Share (%)",
+                "carbon_intensity_gco2_kwh": "Carbon Intensity (gCO2/kWh)",
+            },
+            color_discrete_sequence=px.colors.qualitative.Safe,
+        )
+        renewable_fig.update_layout(
+            height=270,
+            margin=dict(l=0, r=0, t=10, b=0),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            legend_title_text="Dominant Fuel",
+        )
+        st.plotly_chart(renewable_fig, use_container_width=True)
+
+    st.subheader("Country Leaders and Watchlist")
     col1, col2 = st.columns(2)
     with col1:
-        st.subheader("Cleanest Grids")
-        cleanest_10 = country_data.nsmallest(10, "carbon_intensity_gco2_kwh")[
+        cleanest_10 = valid_data.nsmallest(10, "carbon_intensity_gco2_kwh")[
             ["country", "carbon_intensity_gco2_kwh", "renewable_percentage", "dominant_fuel"]
         ].rename(
             columns={
@@ -74,11 +175,23 @@ def render_global_overview(country_data: pd.DataFrame) -> None:
                 "dominant_fuel": "Dominant Fuel",
             }
         )
+        renewable_leaders = valid_data.nlargest(10, "renewable_percentage")[
+            ["country", "renewable_percentage", "carbon_intensity_gco2_kwh", "dominant_fuel"]
+        ].rename(
+            columns={
+                "country": "Country",
+                "renewable_percentage": "Renewable %",
+                "carbon_intensity_gco2_kwh": "gCO2/kWh",
+                "dominant_fuel": "Dominant Fuel",
+            }
+        )
+        st.markdown("**Lowest Carbon Intensity**")
         st.dataframe(cleanest_10, hide_index=True, use_container_width=True)
+        st.markdown("**Highest Renewable Share**")
+        st.dataframe(renewable_leaders, hide_index=True, use_container_width=True)
 
     with col2:
-        st.subheader("Highest Emitters")
-        dirtiest_10 = country_data.nlargest(10, "carbon_intensity_gco2_kwh")[
+        dirtiest_10 = valid_data.nlargest(10, "carbon_intensity_gco2_kwh")[
             ["country", "carbon_intensity_gco2_kwh", "renewable_percentage", "dominant_fuel"]
         ].rename(
             columns={
@@ -88,13 +201,34 @@ def render_global_overview(country_data: pd.DataFrame) -> None:
                 "dominant_fuel": "Dominant Fuel",
             }
         )
+        transition_watchlist = valid_data[
+            (valid_data["dominant_fuel"] == "Coal") & (valid_data["renewable_percentage"] < 25)
+        ].nlargest(10, "carbon_intensity_gco2_kwh")[
+            ["country", "carbon_intensity_gco2_kwh", "renewable_percentage", "dominant_fuel"]
+        ].rename(
+            columns={
+                "country": "Country",
+                "carbon_intensity_gco2_kwh": "gCO2/kWh",
+                "renewable_percentage": "Renewable %",
+                "dominant_fuel": "Dominant Fuel",
+            }
+        )
+        st.markdown("**Highest Carbon Intensity**")
         st.dataframe(dirtiest_10, hide_index=True, use_container_width=True)
+        st.markdown("**Transition Watchlist**")
+        if transition_watchlist.empty:
+            st.info("No countries met the current watchlist filter for coal dominance and low renewable share.")
+        else:
+            st.dataframe(transition_watchlist, hide_index=True, use_container_width=True)
 
 
 def render_policy_simulator(ml_features: pd.DataFrame, model) -> None:
     """Render the coal-to-solar transition simulator."""
     st.markdown("## Policy Impact Simulator")
-    st.markdown("Model the effects of transitioning from fossil fuels to renewable energy sources.")
+    st.markdown(
+        '<p class="section-intro">Test a simplified coal-to-solar transition and use the trained surrogate model to estimate directional changes in annual average grid intensity.</p>',
+        unsafe_allow_html=True,
+    )
 
     coal_mask = ml_features["Coal_pct"] > 5 if "Coal_pct" in ml_features.columns else pd.Series(False, index=ml_features.index)
     countries_with_coal = ml_features[coal_mask].index.tolist()
@@ -181,6 +315,10 @@ def render_policy_simulator(ml_features: pd.DataFrame, model) -> None:
 def render_country_analysis(country_data: pd.DataFrame, ml_features: pd.DataFrame) -> None:
     """Render the country deep-dive page."""
     st.header("Country Deep Dive")
+    st.markdown(
+        '<p class="section-intro">Review one country at a time through the lens of carbon intensity, installed capacity, renewable share, and fuel-mix structure.</p>',
+        unsafe_allow_html=True,
+    )
     all_countries = sorted(country_data["country"].tolist())
     default_index = all_countries.index("USA") if "USA" in all_countries else 0
     selected_country = st.sidebar.selectbox(
@@ -273,10 +411,8 @@ def render_data_center_calculator(country_data: pd.DataFrame) -> None:
     """Render the data center emissions calculator page."""
     st.header("Data Center Carbon Cost Calculator")
     st.markdown(
-        """
-        Calculate the carbon footprint and potential carbon tax costs for data centers based on location.
-        Understand how grid carbon intensity affects operational sustainability.
-        """
+        '<p class="section-intro">Estimate annual electricity demand, operational emissions, and carbon-cost exposure for a data center under different grid-intensity contexts.</p>',
+        unsafe_allow_html=True,
     )
 
     col1, col2 = st.columns(2)
@@ -434,10 +570,8 @@ def render_validation(validation_data) -> None:
     """Render benchmark validation results when available."""
     st.header("Benchmark Validation")
     st.markdown(
-        """
-        Compare modeled country-level carbon intensity against an external benchmark dataset.
-        This helps quantify accuracy, bias, and where the current methodology needs refinement.
-        """
+        '<p class="section-intro">Compare modeled country-level carbon intensity against an external benchmark dataset to quantify accuracy, bias, and where the current methodology needs refinement.</p>',
+        unsafe_allow_html=True,
     )
 
     if validation_data is None:
