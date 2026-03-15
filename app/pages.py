@@ -238,8 +238,8 @@ def render_policy_simulator(ml_features: pd.DataFrame, model) -> None:
         return
 
     default_index = countries_with_coal.index("USA") if "USA" in countries_with_coal else 0
-    selected_country = st.sidebar.selectbox(
-        "Select Country (Policy Sim)",
+    selected_country = st.selectbox(
+        "Country",
         countries_with_coal,
         index=default_index,
         key="policy_country",
@@ -321,8 +321,8 @@ def render_country_analysis(country_data: pd.DataFrame, ml_features: pd.DataFram
     )
     all_countries = sorted(country_data["country"].tolist())
     default_index = all_countries.index("USA") if "USA" in all_countries else 0
-    selected_country = st.sidebar.selectbox(
-        "Select Country for Analysis",
+    selected_country = st.selectbox(
+        "Country",
         all_countries,
         index=default_index,
         key="analysis_country",

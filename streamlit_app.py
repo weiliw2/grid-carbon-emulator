@@ -64,7 +64,7 @@ if data_loaded:
     )
 
     st.sidebar.markdown("### Navigation")
-    st.sidebar.markdown("Use the tabs above to explore different features of the emulator.")
+    st.sidebar.markdown("Use the tabs above to move between overview, scenario, country, calculator, and validation views.")
 
     tab1, tab2, tab3, tab4, tab5 = st.tabs(
         ["Global Overview", "Policy Simulator", "Country Analysis", "Data Center Calculator", "Validation"]
