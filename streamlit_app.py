@@ -17,7 +17,7 @@ from app.styles import APP_CSS
 st.set_page_config(
     page_title="Grid Carbon Analysis Tool",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 ensure_src_on_path()
@@ -63,8 +63,15 @@ if data_loaded:
         unsafe_allow_html=True,
     )
 
-    st.sidebar.markdown("### Navigation")
-    st.sidebar.markdown("Use the tabs above to move between overview, scenario, country, calculator, and validation views.")
+    country_options = sorted(country_data["country"].tolist())
+    default_country = "USA" if "USA" in country_options else country_options[0]
+    selected_country = st.selectbox(
+        "Focus Country",
+        options=country_options,
+        index=country_options.index(default_country),
+        key="focus_country",
+        help="Use one shared country selection across the country-specific views.",
+    )
 
     tab1, tab2, tab3, tab4, tab5 = st.tabs(
         ["Global Overview", "Policy Simulator", "Country Analysis", "Data Center Calculator", "Validation"]
@@ -74,13 +81,13 @@ if data_loaded:
         render_global_overview(country_data)
 
     with tab2:
-        render_policy_simulator(ml_features, model)
+        render_policy_simulator(ml_features, model, selected_country)
 
     with tab3:
-        render_country_analysis(country_data, ml_features)
+        render_country_analysis(country_data, ml_features, selected_country)
 
     with tab4:
-        render_data_center_calculator(country_data)
+        render_data_center_calculator(country_data, selected_country)
 
     with tab5:
         render_validation(validation_data)

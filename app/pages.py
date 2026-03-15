@@ -222,7 +222,7 @@ def render_global_overview(country_data: pd.DataFrame) -> None:
             st.dataframe(transition_watchlist, hide_index=True, use_container_width=True)
 
 
-def render_policy_simulator(ml_features: pd.DataFrame, model) -> None:
+def render_policy_simulator(ml_features: pd.DataFrame, model, selected_country: str) -> None:
     """Render the coal-to-solar transition simulator."""
     st.markdown("## Policy Impact Simulator")
     st.markdown(
@@ -237,20 +237,21 @@ def render_policy_simulator(ml_features: pd.DataFrame, model) -> None:
         st.warning("No countries with significant coal capacity found in the dataset.")
         return
 
-    default_index = countries_with_coal.index("USA") if "USA" in countries_with_coal else 0
-    selected_country = st.selectbox(
-        "Country",
-        countries_with_coal,
-        index=default_index,
-        key="policy_country",
-    )
+    if selected_country in countries_with_coal:
+        policy_country = selected_country
+    else:
+        default_index = countries_with_coal.index("USA") if "USA" in countries_with_coal else 0
+        policy_country = countries_with_coal[default_index]
+        st.caption(
+            f"{selected_country} is not currently included in the coal-to-solar policy simulator selection, so this tab is showing {policy_country}."
+        )
 
-    baseline_features = ml_features.loc[[selected_country]].copy()
+    baseline_features = ml_features.loc[[policy_country]].copy()
     baseline_intensity = model.predict(baseline_features)[0]
     coal_pct = get_feature_value(baseline_features, "Coal_pct")
     renewable_ratio = get_feature_value(baseline_features, "renewable_ratio")
 
-    st.subheader(f"Current State: {selected_country}")
+    st.subheader(f"Current State: {policy_country}")
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Current Carbon Intensity", f"{baseline_intensity:.0f} gCO2/kWh")
@@ -312,22 +313,13 @@ def render_policy_simulator(ml_features: pd.DataFrame, model) -> None:
     st.plotly_chart(fig, use_container_width=True)
 
 
-def render_country_analysis(country_data: pd.DataFrame, ml_features: pd.DataFrame) -> None:
+def render_country_analysis(country_data: pd.DataFrame, ml_features: pd.DataFrame, selected_country: str) -> None:
     """Render the country deep-dive page."""
     st.header("Country Deep Dive")
     st.markdown(
         '<p class="section-intro">Review one country at a time through the lens of carbon intensity, installed capacity, renewable share, and fuel-mix structure.</p>',
         unsafe_allow_html=True,
     )
-    all_countries = sorted(country_data["country"].tolist())
-    default_index = all_countries.index("USA") if "USA" in all_countries else 0
-    selected_country = st.selectbox(
-        "Country",
-        all_countries,
-        index=default_index,
-        key="analysis_country",
-    )
-
     country_info = get_country_row(country_data, selected_country)
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -407,7 +399,7 @@ def render_country_analysis(country_data: pd.DataFrame, ml_features: pd.DataFram
     st.plotly_chart(fig, use_container_width=True)
 
 
-def render_data_center_calculator(country_data: pd.DataFrame) -> None:
+def render_data_center_calculator(country_data: pd.DataFrame, selected_country: str) -> None:
     """Render the data center emissions calculator page."""
     st.header("Data Center Carbon Cost Calculator")
     st.markdown(
@@ -443,9 +435,6 @@ def render_data_center_calculator(country_data: pd.DataFrame) -> None:
 
     with col2:
         st.subheader("Location")
-        country_options = sorted(country_data["country"].tolist())
-        default_index = country_options.index("USA") if "USA" in country_options else 0
-        dc_country = st.selectbox("Data Center Location", options=country_options, index=default_index, key="dc_country")
         carbon_tax = st.number_input(
             "Carbon Tax ($/tonne CO2)",
             min_value=0,
@@ -455,6 +444,7 @@ def render_data_center_calculator(country_data: pd.DataFrame) -> None:
         )
         st.info("EU ETS carbon price: ~EUR80-100/tonne | Singapore: S$25/tonne (rising to S$80)")
 
+    dc_country = selected_country
     country_info = get_country_row(country_data, dc_country)
     metrics = calculate_data_center_metrics(
         carbon_intensity=country_info["carbon_intensity_gco2_kwh"],
