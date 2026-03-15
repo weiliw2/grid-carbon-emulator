@@ -63,6 +63,7 @@ if data_loaded:
         unsafe_allow_html=True,
     )
 
+    country_lookup = dict(zip(country_data["country"], country_data["country_name"]))
     country_options = sorted(country_data["country"].tolist())
     default_country = "USA" if "USA" in country_options else country_options[0]
     selected_country = st.selectbox(
@@ -71,6 +72,7 @@ if data_loaded:
         index=country_options.index(default_country),
         key="focus_country",
         help="Use one shared country selection across the country-specific views.",
+        format_func=lambda code: country_lookup.get(code, code),
     )
 
     tab1, tab2, tab3, tab4, tab5 = st.tabs(

@@ -7,3 +7,4 @@ xgboost
 requests
 matplotlib
 joblib
+pycountry

@@ -14,6 +14,7 @@ from assumptions import (
     MAJOR_ECONOMY_COUNTRIES,
     RENEWABLE_FUELS,
 )
+from country_names import add_country_names
 
 def load_power_plant_data():
     """Load the data from Phase 1"""
@@ -145,6 +146,7 @@ def calculate_country_carbon_intensity(df):
     
     # Sort by carbon intensity
     country_data = country_data.sort_values('carbon_intensity_gco2_kwh', ascending=False)
+    country_data = add_country_names(country_data)
     
     valid_countries = country_data['carbon_intensity_gco2_kwh'].notna().sum()
     print(f"✅ Processed {len(country_data)} countries")

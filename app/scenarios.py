@@ -14,6 +14,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from assumptions import FOSSIL_FUELS, RENEWABLE_FUELS
+from country_names import code_to_country_name
 
 COMPARISON_COUNTRIES = ["USA", "CHN", "IND", "DEU", "FRA", "GBR", "SGP", "NOR", "ISL"]
 
@@ -95,7 +96,8 @@ def build_location_comparison(
         )
         comparison_data.append(
             {
-                "Country": country,
+                "Country": code_to_country_name(country),
+                "Country Code": country,
                 "Carbon Intensity": country_info["carbon_intensity_gco2_kwh"],
                 "Annual Emissions (tonnes)": annual_emissions,
                 "Annual Carbon Cost ($)": annual_emissions * carbon_tax,

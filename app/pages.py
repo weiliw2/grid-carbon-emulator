@@ -11,6 +11,7 @@ from app.scenarios import (
     build_location_comparison,
     calculate_data_center_metrics,
     apply_coal_to_solar_shift,
+    code_to_country_name,
     get_country_row,
     get_feature_value,
 )
@@ -62,9 +63,9 @@ def render_global_overview(country_data: pd.DataFrame) -> None:
         <div class="note-panel">
             <div class="note-title">What To Look For</div>
             <div class="note-body">
-                The cleanest modeled grid in the current dataset is <strong>{cleanest['country']}</strong> at
+                The cleanest modeled grid in the current dataset is <strong>{cleanest['country_name']}</strong> at
                 <strong>{cleanest['carbon_intensity_gco2_kwh']:.0f} gCO2/kWh</strong>, while the most carbon-intensive is
-                <strong>{dirtiest['country']}</strong> at <strong>{dirtiest['carbon_intensity_gco2_kwh']:.0f} gCO2/kWh</strong>.
+                <strong>{dirtiest['country_name']}</strong> at <strong>{dirtiest['carbon_intensity_gco2_kwh']:.0f} gCO2/kWh</strong>.
                 Use the map to identify regional patterns, then compare the distribution and watchlist tables below to spot structural outliers.
             </div>
         </div>
@@ -77,9 +78,9 @@ def render_global_overview(country_data: pd.DataFrame) -> None:
     with col1:
         st.metric("Global Average", f"{avg_intensity:.0f} gCO2/kWh")
     with col2:
-        st.metric("Cleanest Grid", f"{cleanest['country']}: {cleanest['carbon_intensity_gco2_kwh']:.0f}")
+        st.metric("Cleanest Grid", f"{cleanest['country_name']}: {cleanest['carbon_intensity_gco2_kwh']:.0f}")
     with col3:
-        st.metric("Dirtiest Grid", f"{dirtiest['country']}: {dirtiest['carbon_intensity_gco2_kwh']:.0f}")
+        st.metric("Dirtiest Grid", f"{dirtiest['country_name']}: {dirtiest['carbon_intensity_gco2_kwh']:.0f}")
     with col4:
         st.metric("Avg Renewable %", f"{avg_renewable:.1f}%")
 
@@ -92,12 +93,13 @@ def render_global_overview(country_data: pd.DataFrame) -> None:
             locations="country",
             locationmode="ISO-3",
             color="carbon_intensity_gco2_kwh",
-            hover_name="country",
+            hover_name="country_name",
             hover_data={
+                "country": True,
                 "carbon_intensity_gco2_kwh": ":.0f",
                 "renewable_percentage": ":.1f",
                 "dominant_fuel": True,
-                "country": False,
+                "country_name": False,
             },
             color_continuous_scale=[
                 [0.0, "#1f5c4f"],
@@ -145,7 +147,7 @@ def render_global_overview(country_data: pd.DataFrame) -> None:
             valid_data,
             x="renewable_percentage",
             y="carbon_intensity_gco2_kwh",
-            hover_name="country",
+            hover_name="country_name",
             color="dominant_fuel",
             labels={
                 "renewable_percentage": "Renewable Capacity Share (%)",
@@ -166,20 +168,20 @@ def render_global_overview(country_data: pd.DataFrame) -> None:
     col1, col2 = st.columns(2)
     with col1:
         cleanest_10 = valid_data.nsmallest(10, "carbon_intensity_gco2_kwh")[
-            ["country", "carbon_intensity_gco2_kwh", "renewable_percentage", "dominant_fuel"]
+            ["country_name", "carbon_intensity_gco2_kwh", "renewable_percentage", "dominant_fuel"]
         ].rename(
             columns={
-                "country": "Country",
+                "country_name": "Country",
                 "carbon_intensity_gco2_kwh": "gCO2/kWh",
                 "renewable_percentage": "Renewable %",
                 "dominant_fuel": "Dominant Fuel",
             }
         )
         renewable_leaders = valid_data.nlargest(10, "renewable_percentage")[
-            ["country", "renewable_percentage", "carbon_intensity_gco2_kwh", "dominant_fuel"]
+            ["country_name", "renewable_percentage", "carbon_intensity_gco2_kwh", "dominant_fuel"]
         ].rename(
             columns={
-                "country": "Country",
+                "country_name": "Country",
                 "renewable_percentage": "Renewable %",
                 "carbon_intensity_gco2_kwh": "gCO2/kWh",
                 "dominant_fuel": "Dominant Fuel",
@@ -192,10 +194,10 @@ def render_global_overview(country_data: pd.DataFrame) -> None:
 
     with col2:
         dirtiest_10 = valid_data.nlargest(10, "carbon_intensity_gco2_kwh")[
-            ["country", "carbon_intensity_gco2_kwh", "renewable_percentage", "dominant_fuel"]
+            ["country_name", "carbon_intensity_gco2_kwh", "renewable_percentage", "dominant_fuel"]
         ].rename(
             columns={
-                "country": "Country",
+                "country_name": "Country",
                 "carbon_intensity_gco2_kwh": "gCO2/kWh",
                 "renewable_percentage": "Renewable %",
                 "dominant_fuel": "Dominant Fuel",
@@ -204,10 +206,10 @@ def render_global_overview(country_data: pd.DataFrame) -> None:
         transition_watchlist = valid_data[
             (valid_data["dominant_fuel"] == "Coal") & (valid_data["renewable_percentage"] < 25)
         ].nlargest(10, "carbon_intensity_gco2_kwh")[
-            ["country", "carbon_intensity_gco2_kwh", "renewable_percentage", "dominant_fuel"]
+            ["country_name", "carbon_intensity_gco2_kwh", "renewable_percentage", "dominant_fuel"]
         ].rename(
             columns={
-                "country": "Country",
+                "country_name": "Country",
                 "carbon_intensity_gco2_kwh": "gCO2/kWh",
                 "renewable_percentage": "Renewable %",
                 "dominant_fuel": "Dominant Fuel",
@@ -243,7 +245,7 @@ def render_policy_simulator(ml_features: pd.DataFrame, model, selected_country: 
         default_index = countries_with_coal.index("USA") if "USA" in countries_with_coal else 0
         policy_country = countries_with_coal[default_index]
         st.caption(
-            f"{selected_country} is not currently included in the coal-to-solar policy simulator selection, so this tab is showing {policy_country}."
+            f"{code_to_country_name(selected_country)} is not currently included in the coal-to-solar policy simulator selection, so this tab is showing {code_to_country_name(policy_country)}."
         )
 
     baseline_features = ml_features.loc[[policy_country]].copy()
@@ -251,7 +253,7 @@ def render_policy_simulator(ml_features: pd.DataFrame, model, selected_country: 
     coal_pct = get_feature_value(baseline_features, "Coal_pct")
     renewable_ratio = get_feature_value(baseline_features, "renewable_ratio")
 
-    st.subheader(f"Current State: {policy_country}")
+    st.subheader(f"Current State: {code_to_country_name(policy_country)}")
     col1, col2, col3 = st.columns(3)
     with col1:
         st.metric("Current Carbon Intensity", f"{baseline_intensity:.0f} gCO2/kWh")
@@ -348,7 +350,7 @@ def render_country_analysis(country_data: pd.DataFrame, ml_features: pd.DataFram
                 fuel_df,
                 values="Percentage",
                 names="Fuel Type",
-                title=f"{selected_country} Energy Mix",
+                title=f"{country_info['country_name']} Energy Mix",
                 hole=0.5,
                 color_discrete_sequence=px.colors.sequential.Greens_r,
             )
@@ -361,7 +363,7 @@ def render_country_analysis(country_data: pd.DataFrame, ml_features: pd.DataFram
     comparison_data = pd.DataFrame(
         {
             "Metric": ["Carbon Intensity", "Renewable %"],
-            selected_country: [
+            country_info["country_name"]: [
                 country_info["carbon_intensity_gco2_kwh"],
                 country_info["renewable_percentage"],
             ],
@@ -375,9 +377,9 @@ def render_country_analysis(country_data: pd.DataFrame, ml_features: pd.DataFram
     fig = go.Figure()
     fig.add_trace(
         go.Bar(
-            name=selected_country,
+            name=country_info["country_name"],
             x=comparison_data["Metric"],
-            y=comparison_data[selected_country],
+            y=comparison_data[country_info["country_name"]],
             marker_color="#059669",
         )
     )
@@ -464,7 +466,7 @@ def render_data_center_calculator(country_data: pd.DataFrame, selected_country: 
         st.metric(
             "Grid Intensity",
             f"{country_info['carbon_intensity_gco2_kwh']:.0f} gCO2/kWh",
-            help=f"{dc_country} grid carbon intensity",
+            help=f"{country_info['country_name']} grid carbon intensity",
         )
     with col4:
         st.metric(
@@ -499,9 +501,9 @@ def render_data_center_calculator(country_data: pd.DataFrame, selected_country: 
         return
 
     cleanest_location = comparison_df.iloc[0]
-    current_rows = comparison_df[comparison_df["Country"] == dc_country]
+    current_rows = comparison_df[comparison_df["Country Code"] == dc_country]
     if current_rows.empty:
-        st.warning(f"{dc_country} is not available in the current location comparison set.")
+        st.warning(f"{country_info['country_name']} is not available in the current location comparison set.")
         return
     current_location = current_rows.iloc[0]
     emission_savings = current_location["Annual Emissions (tonnes)"] - cleanest_location["Annual Emissions (tonnes)"]
@@ -622,8 +624,10 @@ def render_validation(validation_data) -> None:
         comparison_df,
         x="benchmark_carbon_intensity_gco2_kwh",
         y="carbon_intensity_gco2_kwh",
-        hover_name="country",
+        hover_name="country_name",
         hover_data={
+            "country": True,
+            "country_name": False,
             "error_gco2_kwh": ":.1f",
             "absolute_error_gco2_kwh": ":.1f",
             "benchmark_carbon_intensity_gco2_kwh": ":.1f",
@@ -663,6 +667,7 @@ def render_validation(validation_data) -> None:
         st.dataframe(
             overestimated[
                 [
+                    "country_name",
                     "country",
                     "carbon_intensity_gco2_kwh",
                     "benchmark_carbon_intensity_gco2_kwh",
@@ -670,7 +675,8 @@ def render_validation(validation_data) -> None:
                 ]
             ].rename(
                 columns={
-                    "country": "Country",
+                    "country_name": "Country",
+                    "country": "Code",
                     "carbon_intensity_gco2_kwh": "Model",
                     "benchmark_carbon_intensity_gco2_kwh": "Benchmark",
                     "error_gco2_kwh": "Error",
@@ -685,6 +691,7 @@ def render_validation(validation_data) -> None:
         st.dataframe(
             underestimated[
                 [
+                    "country_name",
                     "country",
                     "carbon_intensity_gco2_kwh",
                     "benchmark_carbon_intensity_gco2_kwh",
@@ -692,7 +699,8 @@ def render_validation(validation_data) -> None:
                 ]
             ].rename(
                 columns={
-                    "country": "Country",
+                    "country_name": "Country",
+                    "country": "Code",
                     "carbon_intensity_gco2_kwh": "Model",
                     "benchmark_carbon_intensity_gco2_kwh": "Benchmark",
                     "error_gco2_kwh": "Error",
@@ -705,6 +713,7 @@ def render_validation(validation_data) -> None:
     st.subheader("Absolute Error Ranking")
     ranked_errors = comparison_df[
         [
+            "country_name",
             "country",
             "carbon_intensity_gco2_kwh",
             "benchmark_carbon_intensity_gco2_kwh",
@@ -713,7 +722,8 @@ def render_validation(validation_data) -> None:
         ]
     ].rename(
         columns={
-            "country": "Country",
+            "country_name": "Country",
+            "country": "Code",
             "carbon_intensity_gco2_kwh": "Model",
             "benchmark_carbon_intensity_gco2_kwh": "Benchmark",
             "absolute_error_gco2_kwh": "Absolute Error",
