@@ -12,6 +12,8 @@ import xgboost as xgb
 import joblib
 import matplotlib.pyplot as plt
 
+from assumptions import FOSSIL_FUELS, RENEWABLE_FUELS
+
 def load_processed_data():
     """Load the processed data from Phase 2"""
     print("📂 Loading processed data from Phase 2...")
@@ -51,13 +53,11 @@ def create_fuel_mix_features(plants_df):
     fuel_pct['num_plants'] = plant_counts
     
     # Calculate renewable ratio
-    renewable_fuels = ['Solar', 'Wind', 'Hydro', 'Geothermal', 'Wave and Tidal']
-    renewable_cols = [f'{fuel}_pct' for fuel in renewable_fuels if f'{fuel}_pct' in fuel_pct.columns]
+    renewable_cols = [f'{fuel}_pct' for fuel in RENEWABLE_FUELS if f'{fuel}_pct' in fuel_pct.columns]
     fuel_pct['renewable_ratio'] = fuel_pct[renewable_cols].sum(axis=1) / 100
     
     # Calculate fossil fuel ratio
-    fossil_fuels = ['Coal', 'Oil', 'Gas']
-    fossil_cols = [f'{fuel}_pct' for fuel in fossil_fuels if f'{fuel}_pct' in fuel_pct.columns]
+    fossil_cols = [f'{fuel}_pct' for fuel in FOSSIL_FUELS if f'{fuel}_pct' in fuel_pct.columns]
     fuel_pct['fossil_ratio'] = fuel_pct[fossil_cols].sum(axis=1) / 100
     
     print(f"✅ Created {len(fuel_pct.columns)} features for {len(fuel_pct)} countries\n")

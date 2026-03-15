@@ -29,6 +29,9 @@ This project builds a machine learning emulator that instantly predicts a countr
 
 **Emission Factors:** Standard IPCC/EPA values (Coal: 820 gCO2/kWh, Gas: 490, Solar: 48, etc.)
 
+Detailed methodology, assumptions, and current limitations are documented in [docs/methodology.md](/Users/weilynnw/grid-carbon-emulator/docs/methodology.md).
+The benchmark validation workflow is documented in [docs/validation.md](/Users/weilynnw/grid-carbon-emulator/docs/validation.md).
+
 ## Key Results
 
 ### Model Performance

@@ -6,24 +6,14 @@ Carbon Intensity Calculations with better data handling
 import pandas as pd
 import numpy as np
 
-# Emission Factors (gCO2/kWh) - Standard values from IPCC and EPA
-EMISSION_FACTORS = {
-    'Coal': 820,
-    'Oil': 650,
-    'Gas': 490,
-    'Petcoke': 900,
-    'Cogeneration': 400,
-    'Biomass': 230,
-    'Nuclear': 12,
-    'Hydro': 24,
-    'Wind': 11,
-    'Solar': 48,
-    'Geothermal': 38,
-    'Wave and Tidal': 15,
-    'Storage': 0,
-    'Other': 500,
-    'Waste': 700,
-}
+from assumptions import (
+    CAPACITY_FACTORS,
+    DEFAULT_CAPACITY_FACTOR,
+    DEFAULT_EMISSION_FACTOR_FUEL,
+    EMISSION_FACTORS_GCO2_PER_KWH,
+    MAJOR_ECONOMY_COUNTRIES,
+    RENEWABLE_FUELS,
+)
 
 def load_power_plant_data():
     """Load the data from Phase 1"""
@@ -37,13 +27,15 @@ def map_emission_factors(df):
     
     print("🔬 Mapping emission factors to fuel types...")
     
-    df['emission_factor_gco2_kwh'] = df['primary_fuel'].map(EMISSION_FACTORS)
+    df['emission_factor_gco2_kwh'] = df['primary_fuel'].map(EMISSION_FACTORS_GCO2_PER_KWH)
     
     unmapped = df[df['emission_factor_gco2_kwh'].isna()]['primary_fuel'].unique()
     if len(unmapped) > 0:
         print(f"\n⚠️  Unmapped fuel types: {list(unmapped)}")
-        print(f"   Setting these to 'Other' (500 gCO2/kWh)")
-        df['emission_factor_gco2_kwh'].fillna(EMISSION_FACTORS['Other'], inplace=True)
+        print(f"   Setting these to '{DEFAULT_EMISSION_FACTOR_FUEL}' ({EMISSION_FACTORS_GCO2_PER_KWH[DEFAULT_EMISSION_FACTOR_FUEL]} gCO2/kWh)")
+        df['emission_factor_gco2_kwh'] = df['emission_factor_gco2_kwh'].fillna(
+            EMISSION_FACTORS_GCO2_PER_KWH[DEFAULT_EMISSION_FACTOR_FUEL]
+        )
     
     print(f"✅ Emission factors mapped\n")
     return df
@@ -70,32 +62,31 @@ def calculate_plant_emissions(df):
     # First, try to use actual generation (prefer most recent year)
     if actual_cols:
         most_recent_actual = sorted(actual_cols)[-1]
-        df['generation_gwh'] = df[most_recent_actual]
+        df['generation_gwh'] = pd.to_numeric(df[most_recent_actual], errors='coerce')
         print(f"   Using actual generation from: {most_recent_actual}")
+    else:
+        df['generation_gwh'] = np.nan
     
     # Fill missing values with estimated generation
     if estimated_cols:
         most_recent_estimated = sorted(estimated_cols)[-1]
-        missing_mask = df['generation_gwh'].isna()
-        df.loc[missing_mask, 'generation_gwh'] = df.loc[missing_mask, most_recent_estimated]
+        estimated_values = pd.to_numeric(df[most_recent_estimated], errors='coerce')
+        missing_mask = df['generation_gwh'].isna() & estimated_values.notna()
+        df.loc[missing_mask, 'generation_gwh'] = estimated_values.loc[missing_mask]
         print(f"   Filled missing with estimates from: {most_recent_estimated}")
     
     # For plants still missing generation, estimate from capacity
     # Use capacity factor assumptions by fuel type
-    capacity_factors = {
-        'Coal': 0.60, 'Oil': 0.40, 'Gas': 0.50, 'Nuclear': 0.90,
-        'Hydro': 0.45, 'Wind': 0.35, 'Solar': 0.25, 'Geothermal': 0.75,
-        'Biomass': 0.50, 'Other': 0.50
-    }
-    
     still_missing = df['generation_gwh'].isna()
-    for fuel, cf in capacity_factors.items():
+    for fuel, cf in CAPACITY_FACTORS.items():
         mask = still_missing & (df['primary_fuel'] == fuel)
         df.loc[mask, 'generation_gwh'] = df.loc[mask, 'capacity_mw'] * cf * 8760 / 1000
     
     # Final fallback: use 0.5 capacity factor for any remaining
     still_missing = df['generation_gwh'].isna()
-    df.loc[still_missing, 'generation_gwh'] = df.loc[still_missing, 'capacity_mw'] * 0.5 * 8760 / 1000
+    df.loc[still_missing, 'generation_gwh'] = (
+        df.loc[still_missing, 'capacity_mw'] * DEFAULT_CAPACITY_FACTOR * 8760 / 1000
+    )
     
     plants_with_data = (df['generation_gwh'] > 0).sum()
     print(f"\n   ✅ {plants_with_data:,} plants now have generation data")
@@ -140,8 +131,7 @@ def calculate_country_carbon_intensity(df):
     )
     
     # Calculate renewable percentage
-    renewables = ['Solar', 'Wind', 'Hydro', 'Geothermal', 'Wave and Tidal']
-    renewable_capacity = df[df['primary_fuel'].isin(renewables)].groupby('country')['capacity_mw'].sum()
+    renewable_capacity = df[df['primary_fuel'].isin(RENEWABLE_FUELS)].groupby('country')['capacity_mw'].sum()
     country_data['renewable_capacity_mw'] = country_data['country'].map(renewable_capacity).fillna(0)
     country_data['renewable_percentage'] = (
         country_data['renewable_capacity_mw'] / country_data['total_capacity_mw'] * 100
@@ -192,8 +182,7 @@ def show_insights(country_data):
               f"({row.renewable_percentage:>5.1f}% renewable, {row.dominant_fuel})")
     
     print("\n🌍 MAJOR ECONOMIES:")
-    major = ['USA', 'CHN', 'IND', 'DEU', 'GBR', 'FRA', 'JPN', 'BRA']
-    major_data = valid_data[valid_data['country'].isin(major)]
+    major_data = valid_data[valid_data['country'].isin(MAJOR_ECONOMY_COUNTRIES)]
     for row in major_data.itertuples():
         print(f"   {row.country:5s}: {row.carbon_intensity_gco2_kwh:>6.0f} gCO2/kWh "
               f"({row.renewable_percentage:>5.1f}% renewable, {row.dominant_fuel})")
