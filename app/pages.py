@@ -84,41 +84,40 @@ def render_global_overview(country_data: pd.DataFrame) -> None:
     with col4:
         st.metric("Avg Renewable %", f"{avg_renewable:.1f}%")
 
-    col_map, col_dist = st.columns([1.8, 1], gap="large")
+    st.subheader("Carbon Intensity by Country")
+    fig = px.choropleth(
+        valid_data,
+        locations="country",
+        locationmode="ISO-3",
+        color="carbon_intensity_gco2_kwh",
+        hover_name="country_name",
+        hover_data={
+            "country": True,
+            "carbon_intensity_gco2_kwh": ":.0f",
+            "renewable_percentage": ":.1f",
+            "dominant_fuel": True,
+            "country_name": False,
+        },
+        color_continuous_scale=[
+            [0.0, "#1f5c4f"],
+            [0.5, "#ddb96b"],
+            [1.0, "#b85c38"],
+        ],
+        labels={"carbon_intensity_gco2_kwh": "Carbon Intensity (gCO2/kWh)"},
+    )
+    fig.update_layout(
+        height=560,
+        margin=dict(l=0, r=0, t=0, b=0),
+        paper_bgcolor="rgba(0,0,0,0)",
+        geo=dict(bgcolor="rgba(0,0,0,0)", showframe=False, projection_type="natural earth"),
+        coloraxis_colorbar=dict(len=0.72, thickness=16),
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
-    with col_map:
-        st.subheader("Carbon Intensity by Country")
-        fig = px.choropleth(
-            valid_data,
-            locations="country",
-            locationmode="ISO-3",
-            color="carbon_intensity_gco2_kwh",
-            hover_name="country_name",
-            hover_data={
-                "country": True,
-                "carbon_intensity_gco2_kwh": ":.0f",
-                "renewable_percentage": ":.1f",
-                "dominant_fuel": True,
-                "country_name": False,
-            },
-            color_continuous_scale=[
-                [0.0, "#1f5c4f"],
-                [0.5, "#ddb96b"],
-                [1.0, "#b85c38"],
-            ],
-            labels={"carbon_intensity_gco2_kwh": "Carbon Intensity (gCO2/kWh)"},
-        )
-        fig.update_layout(
-            height=560,
-            margin=dict(l=0, r=0, t=0, b=0),
-            paper_bgcolor="rgba(0,0,0,0)",
-            geo=dict(bgcolor="rgba(0,0,0,0)", showframe=False, projection_type="natural earth"),
-            coloraxis_colorbar=dict(len=0.72, thickness=16),
-        )
-        st.plotly_chart(fig, use_container_width=True)
+    st.subheader("Distribution")
+    col_dist1, col_dist2 = st.columns(2, gap="large")
 
-    with col_dist:
-        st.subheader("Distribution")
+    with col_dist1:
         distribution_fig = px.histogram(
             valid_data,
             x="carbon_intensity_gco2_kwh",
@@ -134,7 +133,7 @@ def render_global_overview(country_data: pd.DataFrame) -> None:
             annotation_position="top right",
         )
         distribution_fig.update_layout(
-            height=270,
+            height=300,
             bargap=0.08,
             margin=dict(l=0, r=0, t=10, b=0),
             paper_bgcolor="rgba(0,0,0,0)",
@@ -143,6 +142,7 @@ def render_global_overview(country_data: pd.DataFrame) -> None:
         )
         st.plotly_chart(distribution_fig, use_container_width=True)
 
+    with col_dist2:
         renewable_fig = px.scatter(
             valid_data,
             x="renewable_percentage",
@@ -156,7 +156,7 @@ def render_global_overview(country_data: pd.DataFrame) -> None:
             color_discrete_sequence=px.colors.qualitative.Safe,
         )
         renewable_fig.update_layout(
-            height=270,
+            height=300,
             margin=dict(l=0, r=0, t=10, b=0),
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
